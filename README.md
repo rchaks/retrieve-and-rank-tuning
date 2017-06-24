@@ -27,9 +27,8 @@ For more information about `Discovery`, see the [detailed documentation](https:/
     - If you already have it installed, you might still
   want to check if you've updated to the latest installation `pip install --upgrade pip`
 
-3. Install [virtualenv](https://virtualenv.pypa.io/en/stable/installation/)
-
-4. (Optional) Initialize a clean virtualenv:
+3. (Optional) Install [virtualenv](https://virtualenv.pypa.io/en/stable/installation/) and 
+initialize a clean virtualenv:
     - `virtualenv {location of virtualenv}`
     - `source {location of virtualenv}/bin/activate`
 
