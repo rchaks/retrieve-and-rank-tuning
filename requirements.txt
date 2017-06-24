@@ -1,0 +1,4 @@
+watson-developer-cloud
+pytest
+argparse
+requests

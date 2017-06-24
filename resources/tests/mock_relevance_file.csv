@@ -1,0 +1,5 @@
+"my first query", "doc_id_1", "1", "doc_id_24", "3", "doc_id_7000", "1"
+my second query without double quotes, doc_id_36, 2, doc_id_2, 2, doc_id_3, 0
+"my third query with utf-8 char ñ", "doc_id_3", "1", doc_id_2, 1000, "doc_id_3", "1"
+"my third query with comma,", "doc_id_36", "2", doc_id_2, 0, "doc_id_3", "0"
+my last query with no labelled answers

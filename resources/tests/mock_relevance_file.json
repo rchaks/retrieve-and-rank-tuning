@@ -1,0 +1,174 @@
+[
+  {
+    "text": "my first query",
+    "cluster": {
+      "id": "09eb7a30-b0c2-11e6-8173-c78e22089dff",
+      "answers": {
+        "some_user@some_domain.com": [
+          {
+            "id": "doc_id_1",
+            "ranking": 1,
+            "source": {
+              "id": "338ec850-908e-11e6-8105-1d464bc32452",
+              "file": "Some file",
+              "sequence": 0,
+              "strategy": "retrieveandrank"
+            }
+          },
+          {
+            "id": "doc_id_24",
+            "ranking": 4,
+            "source": {
+              "id": "6d00fd40-894c-11e6-a459-ff872932489a",
+              "file": "some other file",
+              "sequence": 0,
+              "strategy": "retrieveandrank"
+            }
+          },
+          {
+            "id": "doc_id_7000",
+            "ranking": 3,
+            "source": {
+              "id": "7037e550-894c-11e6-a459-ff872932489a",
+              "file": "more files",
+              "sequence": 0,
+              "strategy": "retrieveandrank"
+            }
+          }
+        ]
+      },
+      "flags": {}
+    }
+  },
+  {
+    "text": "my second query without double quotes",
+    "cluster": {
+      "id": "11e43f40-b042-11e6-8aa8-1bef1e6c8380",
+      "answers": {
+        "some_user@some_domain.com": [
+          {
+            "id": "doc_id_36",
+            "ranking": 2,
+            "source": {
+              "id": "65b72500-894c-11e6-a459-ff872932489a",
+              "file": "a file",
+              "sequence": 0,
+              "strategy": "retrieveandrank"
+            }
+          },
+          {
+            "id": "doc_id_2",
+            "ranking": 2,
+            "source": {
+              "id": "70fcbbf0-894c-11e6-a459-ff872932489a",
+              "file": "some file",
+              "sequence": 0,
+              "strategy": "retrieveandrank"
+            }
+          },
+          {
+            "id": "doc_id_3",
+            "ranking": 1,
+            "source": {
+              "id": "6e693fd0-894c-11e6-a459-ff872932489a",
+              "file": "some file name bla bla",
+              "sequence": 0,
+              "strategy": "retrieveandrank"
+            }
+          }
+        ]
+      },
+      "flags": {}
+    }
+  },
+  {
+    "text": "my third query with utf-8 char ñ",
+    "cluster": {
+      "id": "11e46653-b042-11e6-8aa8-1bef1e6c8380",
+      "answers": {
+        "some_user@some_domain.com": [
+          {
+            "id": "doc_id_36",
+            "ranking": 4,
+            "source": {
+              "id": "65b72500-894c-11e6-a459-ff872932489a",
+              "file": "lkejlaiejfl eaeilajefkl",
+              "sequence": 0,
+              "strategy": "retrieveandrank"
+            }
+          },
+          {
+            "id": "doc_id_2",
+            "ranking": 1,
+            "source": {
+              "id": "34512df0-908e-11e6-8105-1d464bc32452",
+              "file": "afkejlkf jekjlakf",
+              "sequence": 0,
+              "strategy": "retrieveandrank"
+            }
+          },
+          {
+            "id": "doc_id_3",
+            "ranking": 1,
+            "source": {
+              "id": "426e27d0-908e-11e6-8105-1d464bc32452",
+              "file": "afelka elfjeiljlk",
+              "sequence": 0,
+              "strategy": "retrieveandrank"
+            }
+          }
+        ]
+      },
+      "flags": {}
+    }
+  },
+  {
+    "text": "my third query with comma,",
+    "cluster": {
+      "id": "11e46655-b042-11e6-8aa8-1bef1e6c8380",
+      "answers": {
+        "some_user@some_domain.com": [
+          {
+            "id": "doc_id_36",
+            "ranking": 4,
+            "source": {
+              "id": "65b72500-894c-11e6-a459-ff872932489a",
+              "file": "Lorem ipsum",
+              "sequence": 0,
+              "strategy": "retrieveandrank"
+            }
+          },
+          {
+            "id": "doc_id_2",
+            "ranking": 1,
+            "source": {
+              "id": "70fcbbf0-894c-11e6-a459-ff872932489a",
+              "file": "lfejklei afe",
+              "sequence": 0,
+              "strategy": "retrieveandrank"
+            }
+          },
+          {
+            "id": "doc_id_3",
+            "ranking": 1,
+            "source": {
+              "id": "31755e30-908e-11e6-8105-1d464bc32452",
+              "file": "alfkejliefja ",
+              "sequence": 0,
+              "strategy": "retrieveandrank"
+            }
+          }
+        ]
+      },
+      "flags": {}
+    }
+  },
+  {
+    "text": "my last query with no labelled answers",
+    "cluster": {
+      "id": "11e46657-b042-11e6-8aa8-1bef1e6c8380",
+      "answers": {},
+      "flags": {}
+    }
+  }
+]
