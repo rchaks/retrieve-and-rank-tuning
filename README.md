@@ -17,7 +17,7 @@ For more information about `Discovery`, see the [detailed documentation](https:/
 
 # Getting Started
 ## 0. Clone the repository
-`git clone...`
+`git clone git@github.com:rchaks/retrieve-and-rank-tuning.git`
 
 ## 1. Setup Python Environment
 1. Ensure installation of [Python3.5](https://www.python.org/downloads/release/python-353/)
