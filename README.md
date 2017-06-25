@@ -1,4 +1,4 @@
-# rnr-debugging-scripts
+# Retrieve and Rank (and Discovery) Experimental Tuning Scripts
 
 This repository contains helper scripts and examples that demonstrate
 * how to use the `Retrieve And Rank` and `Discovery` watson services
