@@ -84,7 +84,7 @@ You can just view these in github (it has
 Though the Jupyter notebooks show usage from inside Python, the scripts
 inside [rnr_debug_helpers](rnr_debug_helpers) are also command line 
  friendly.  For usage info run:
-  `python rnr_debug_helpers <script_name.py> --help`
+  `python rnr_debug_helpers/<script_name.py> --help`
 
 # License
 
