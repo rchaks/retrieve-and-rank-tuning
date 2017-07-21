@@ -145,7 +145,6 @@ class DiscoveryProxy(object):
 
         temp_file = get_temp_file(prediction_file_location)
         stats = defaultdict(float)
-        stats['response_time'] = timedelta(seconds=0)
         with smart_file_open(temp_file, 'w') as prediction_outfile:
             writer = csv.writer(prediction_outfile, delimiter=' ')
             for query in test_questions:
@@ -155,7 +154,7 @@ class DiscoveryProxy(object):
                                                                            query_text=query.get_qid(),
                                                                            collection_id=collection_id,
                                                                            num_results_to_return=num_rows)
-                stats['response_time'] += response_time
+                stats['response_time_in_seconds'] += response_time.total_seconds()
                 if predictions:
                     stats['num_results_returned'] += len(predictions)
                     self._write_results_to_file(predictions, writer)
@@ -166,7 +165,7 @@ class DiscoveryProxy(object):
 
             if stats['num_questions'] < 1:
                 raise ValueError("No test instances found in the file")
-            stats['avg_response_time'] = stats['response_time'] / stats['num_questions']
+            stats['avg_response_time_in_seconds'] = stats['response_time_in_seconds'] / stats['num_questions']
 
         move(temp_file, prediction_file_location)
 
