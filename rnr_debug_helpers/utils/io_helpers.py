@@ -13,6 +13,7 @@ from collections import OrderedDict
 from collections import deque
 from configparser import ConfigParser
 from warnings import warn
+from urllib3.util.retry import Retry
 
 from pkg_resources import resource_filename
 
@@ -35,6 +36,16 @@ def initialize_logger(log_level, name):
         logger.addHandler(ch)
 
     return logger
+
+
+def initialize_retry_settings(config):
+    return Retry(connect=config.getint('HttpRetrySettings', 'on_connection_error', fallback=5),
+                 read=config.getint('HttpRetrySettings', 'on_read_error', fallback=2),
+                 redirect=config.getint('HttpRetrySettings', 'on_redirect_error', fallback=2),
+                 status=config.getint('HttpRetrySettings', 'on_internal_server_error', fallback=2),
+                 status_forcelist=[500],
+                 backoff_factor=config.getfloat('HttpRetrySettings',
+                                                'back_off_factor_between_retries', fallback=0.2))
 
 
 def load_config(config_file_path=resource_filename('config', 'config.ini'), encoding=DEFAULT_ENCODING):

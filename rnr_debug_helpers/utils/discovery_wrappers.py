@@ -10,6 +10,7 @@ import sys
 import time
 import urllib.parse
 from collections import defaultdict
+from datetime import timedelta
 from multiprocessing import Manager, Process, active_children
 from os import path
 from pprint import pprint
@@ -17,9 +18,11 @@ from shutil import move
 from warnings import warn
 
 import requests
+from requests.adapters import HTTPAdapter
 from watson_developer_cloud import discovery_v1
 
-from rnr_debug_helpers.utils.io_helpers import load_config, initialize_logger, smart_file_open, get_temp_file
+from rnr_debug_helpers.utils.io_helpers import load_config, initialize_logger, smart_file_open, get_temp_file, \
+    initialize_retry_settings
 from rnr_debug_helpers.utils.predictions import Prediction
 
 # only applicable if you don't use the natural_language_query parameter
@@ -65,7 +68,7 @@ def search_for_byod_environment_id(discovery):
     for environment in discovery.get_environments()['environments']:
         if environment['name'] == 'byod':
             return environment['environment_id']
-    raise RuntimeError('Need to specify an environment id, couldnt find one in the config...')
+    raise RuntimeError("Need to specify an environment id, couldn't find one in the config...")
 
 
 class DiscoveryProxy(object):
@@ -73,7 +76,6 @@ class DiscoveryProxy(object):
     My convenience wrapper for the Discovery API calls as well as helper methods to pre-process/post-process
         data going into and out of those API calls.
     """
-    _MAX_RETRIES = 3
 
     def __init__(self, config=load_config(), logger=initialize_logger(logging.INFO, 'DiscoveryProxy')):
         """
@@ -86,6 +88,11 @@ class DiscoveryProxy(object):
         self.discovery = initialize_discovery_service(config)
         self.environment_id = config.get('Discovery', 'environment_id',
                                          fallback=search_for_byod_environment_id(self.discovery))
+        self.http_connection = requests.Session()
+        self.http_connection.auth = (config.get('Discovery', 'user'), config.get('Discovery', 'password'))
+        self.http_connection.headers = {'x-global-transaction-id': 'rnr-tuning-scripts'}
+        self.http_connection.mount('https://', HTTPAdapter(max_retries=initialize_retry_settings(config)))
+        self.http_connection.mount('http://', HTTPAdapter(max_retries=initialize_retry_settings(config)))
 
     @property
     def environment_id(self):
@@ -105,12 +112,10 @@ class DiscoveryProxy(object):
 
         response = None
         try:
-            response = requests.get("{}/v1/environments/{}/collections/{}/query".format(self.discovery.url,
-                                                                                        self.environment_id,
-                                                                                        collection_id),
-                                    params=urllib.parse.urlencode(query_parameters),
-                                    auth=(
-                                        self.config.get('Discovery', 'user'), self.config.get('Discovery', 'password')))
+            response = self.http_connection.get("{}/v1/environments/{}/collections/{}/query".format(self.discovery.url,
+                                                                                                    self.environment_id,
+                                                                                                    collection_id),
+                                                params=urllib.parse.urlencode(query_parameters))
             response.raise_for_status()
             predictions = self._parse_response_content_for_predictions(question_number, response)
         except Exception as ex:
@@ -118,7 +123,7 @@ class DiscoveryProxy(object):
             if response is not None:
                 pprint(vars(response))
             raise
-        return predictions
+        return predictions, response.elapsed
 
     def generate_natural_language_prediction_scores(self, test_questions, prediction_file_location, collection_id,
                                                     num_rows=10):
@@ -145,10 +150,11 @@ class DiscoveryProxy(object):
             for query in test_questions:
                 stats['num_questions'] += 1
                 self.logger.debug("Generate predictions for query <<%s>>" % query.get_qid())
-                predictions = self._get_runtime_predictions(stats['num_questions'],
-                                                            query_text=query.get_qid(),
-                                                            collection_id=collection_id,
-                                                            num_results_to_return=num_rows)
+                predictions, response_time = self._get_runtime_predictions(stats['num_questions'],
+                                                                           query_text=query.get_qid(),
+                                                                           collection_id=collection_id,
+                                                                           num_results_to_return=num_rows)
+                stats['response_time_in_seconds'] += response_time.total_seconds()
                 if predictions:
                     stats['num_results_returned'] += len(predictions)
                     self._write_results_to_file(predictions, writer)
@@ -159,6 +165,8 @@ class DiscoveryProxy(object):
 
             if stats['num_questions'] < 1:
                 raise ValueError("No test instances found in the file")
+            stats['avg_response_time_in_seconds'] = stats['response_time_in_seconds'] / stats['num_questions']
+
         move(temp_file, prediction_file_location)
 
         self.logger.info("Completed getting runtime predictions for %d questions" % stats['num_questions'])
@@ -322,16 +330,13 @@ class DiscoveryProxy(object):
         self.logger.info('Uploaded %d queries worth of training data' % num_queries)
 
     def _upload_training_example(self, training_example_for_discovery, collection_id):
-        response = requests.post(
+        response = self.http_connection.post(
             "{}/v1/environments/{}/collections/{}/training_data".format(self.discovery.url,
                                                                         self.environment_id,
                                                                         collection_id),
             data=json.dumps(training_example_for_discovery),
-            auth=(
-                self.config.get('Discovery', 'user'),
-                self.config.get('Discovery', 'password')),
             params={'version': self.discovery.version},
-            headers={'x-global-transaction-id': 'Rishavs app', 'Content-type': 'application/json'})
+            headers={'Content-type': 'application/json'})
         if response.status_code == 409:
             self.logger.warn('Encountered this query text a second time, so just adding the examples: %s' %
                              training_example_for_discovery['natural_language_query'])
@@ -340,17 +345,14 @@ class DiscoveryProxy(object):
 
             for example in training_example_for_discovery['examples']:
                 if example['document_id'] not in previously_labelled_doc_ids:
-                    response = requests.post(
+                    response = self.http_connection.post(
                         "{}/v1/environments/{}/collections/{}/training_data/{}/examples".format(self.discovery.url,
                                                                                                 self.environment_id,
                                                                                                 collection_id,
                                                                                                 query_id),
                         data=json.dumps(example),
-                        auth=(
-                            self.config.get('Discovery', 'user'),
-                            self.config.get('Discovery', 'password')),
                         params={'version': self.discovery.version},
-                        headers={'x-global-transaction-id': 'Rishavs app', 'Content-type': 'application/json'})
+                        headers={'Content-type': 'application/json'})
                     if response.status_code != 200 or self.logger.isEnabledFor(logging.DEBUG):
                         pprint(vars(response))
                     response.raise_for_status()
@@ -375,15 +377,12 @@ class DiscoveryProxy(object):
     def _find_query_id_for_previously_uploaded_example(self, collection_id, training_example_for_discovery):
         self.logger.warn('Found more than one labelled query with the same text, consolidating into the same'
                          ' training example for Discovery')
-        response = requests.get(
+        response = self.http_connection.get(
             "{}/v1/environments/{}/collections/{}/training_data".format(self.discovery.url,
                                                                         self.environment_id,
                                                                         collection_id),
-            auth=(
-                self.config.get('Discovery', 'user'),
-                self.config.get('Discovery', 'password')),
             params={'version': self.discovery.version},
-            headers={'x-global-transaction-id': 'Rishavs app', 'Content-type': 'application/json'})
+            headers={'Content-type': 'application/json'})
         if response.status_code != 200 or self.logger.isEnabledFor(logging.DEBUG):
             pprint(vars(response))
         response.raise_for_status()
@@ -416,7 +415,7 @@ def upload_file_to_discovery_collection(config, environment_id, collection_id, d
             #                                   'Content-type': 'application/json'})
             # response.raise_for_status()
             # response_as_json = response.json()
-            
+
             # HACK: Currently the document id passed in IS NOT the document id with which Discovery stores the
             # document; instead Discovery seems to over ride the document id with its own auto-generated document
             # id...so we store the old document_id as a field titled DOC_ID_FIELD_NAME in the body of the document
