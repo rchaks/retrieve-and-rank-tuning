@@ -8,6 +8,7 @@ import json
 import logging
 import sys
 import time
+from datetime import timedelta
 import urllib.parse
 from collections import defaultdict
 from multiprocessing import Manager, Process, active_children
@@ -118,7 +119,7 @@ class DiscoveryProxy(object):
             if response is not None:
                 pprint(vars(response))
             raise
-        return predictions
+        return predictions, response.elapsed
 
     def generate_natural_language_prediction_scores(self, test_questions, prediction_file_location, collection_id,
                                                     num_rows=10):
@@ -140,15 +141,17 @@ class DiscoveryProxy(object):
 
         temp_file = get_temp_file(prediction_file_location)
         stats = defaultdict(float)
+        stats['response_time'] = timedelta(seconds=0)
         with smart_file_open(temp_file, 'w') as prediction_outfile:
             writer = csv.writer(prediction_outfile, delimiter=' ')
             for query in test_questions:
                 stats['num_questions'] += 1
                 self.logger.debug("Generate predictions for query <<%s>>" % query.get_qid())
-                predictions = self._get_runtime_predictions(stats['num_questions'],
-                                                            query_text=query.get_qid(),
-                                                            collection_id=collection_id,
-                                                            num_results_to_return=num_rows)
+                predictions, response_time = self._get_runtime_predictions(stats['num_questions'],
+                                                                           query_text=query.get_qid(),
+                                                                           collection_id=collection_id,
+                                                                           num_results_to_return=num_rows)
+                stats['response_time'] += response_time
                 if predictions:
                     stats['num_results_returned'] += len(predictions)
                     self._write_results_to_file(predictions, writer)
@@ -159,6 +162,8 @@ class DiscoveryProxy(object):
 
             if stats['num_questions'] < 1:
                 raise ValueError("No test instances found in the file")
+            stats['avg_response_time'] = stats['response_time'] / stats['num_questions']
+
         move(temp_file, prediction_file_location)
 
         self.logger.info("Completed getting runtime predictions for %d questions" % stats['num_questions'])
@@ -416,7 +421,7 @@ def upload_file_to_discovery_collection(config, environment_id, collection_id, d
             #                                   'Content-type': 'application/json'})
             # response.raise_for_status()
             # response_as_json = response.json()
-            
+
             # HACK: Currently the document id passed in IS NOT the document id with which Discovery stores the
             # document; instead Discovery seems to over ride the document id with its own auto-generated document
             # id...so we store the old document_id as a field titled DOC_ID_FIELD_NAME in the body of the document

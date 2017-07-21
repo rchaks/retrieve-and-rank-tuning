@@ -10,6 +10,7 @@ import sys
 import tempfile
 import urllib.parse
 from collections import defaultdict
+from datetime import timedelta
 from os import path
 from pprint import pprint
 from shutil import move
@@ -135,7 +136,7 @@ class RetrieveAndRankProxy(AbstractBluemixProxy):
             if response is not None:
                 pprint(vars(response))
             raise
-        return predictions
+        return predictions, response.elapsed
 
     def generate_fcselect_prediction_scores(self, test_questions, prediction_file_location, collection_id, num_rows=10,
                                             ranker_id=None):
@@ -161,15 +162,18 @@ class RetrieveAndRankProxy(AbstractBluemixProxy):
 
         temp_file = get_temp_file(prediction_file_location)
         stats = defaultdict(float)
+        stats['response_time'] = timedelta(seconds=0)
         with smart_file_open(temp_file, 'w') as prediction_outfile:
             writer = csv.writer(prediction_outfile, delimiter=' ')
             for query in test_questions:
                 stats['num_questions'] += 1
                 self.logger.debug("Generate predictions for query <<%s>>" % query.get_qid())
-                predictions = self._get_runtime_predictions(stats['num_questions'],
-                                                            query_text=query.get_qid(),
-                                                            collection_id=collection_id,
-                                                            num_results_to_return=num_rows, ranker_id=ranker_id)
+                predictions, response_time = self._get_runtime_predictions(stats['num_questions'],
+                                                                           query_text=query.get_qid(),
+                                                                           collection_id=collection_id,
+                                                                           num_results_to_return=num_rows,
+                                                                           ranker_id=ranker_id)
+                stats['response_time'] += response_time
                 if predictions:
                     stats['num_results_returned'] += len(predictions)
                     self._write_results_to_file(predictions, writer)
@@ -180,6 +184,7 @@ class RetrieveAndRankProxy(AbstractBluemixProxy):
 
             if stats['num_questions'] < 1:
                 raise ValueError("No test instances found in the file")
+            stats['avg_response_time'] = stats['response_time'] / stats['num_questions']
         move(temp_file, prediction_file_location)
 
         self.logger.info("Completed getting runtime predictions for %d questions" % stats['num_questions'])
